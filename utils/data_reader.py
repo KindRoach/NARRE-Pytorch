@@ -41,8 +41,24 @@ def get_max_review_length(data: DataFrame, percentile: float = 0.85) -> int:
         .apply(lambda review: len(review.split()))
     # max_length = review_lengths.max()
     max_length = int(review_lengths.quantile(percentile, interpolation="lower"))
-    logger.critical(f"Max length = {max_length}.")
+    logger.info(f"Max review length = {max_length}.")
     return max_length
+
+
+def get_max_review_count(data: DataFrame, percentile: float = 0.85):
+    """
+    We set the max review count to 85% percentile of all data as default.
+    """
+
+    review_count_user = data["review"].groupby([data["userID"]]).count()
+    review_count_user = int(review_count_user.quantile(percentile, interpolation="lower"))
+
+    review_count_item = data["review"].groupby([data["itemID"]]).count()
+    review_count_item = int(review_count_item.quantile(percentile, interpolation="lower"))
+
+    max_count = max(review_count_item, review_count_user)
+    logger.info(f"Max review count = {max_count}.")
+    return max_count
 
 
 def process_raw_data(in_path="data/Digital_Music_5.json", out_path="data/reviews.json"):
