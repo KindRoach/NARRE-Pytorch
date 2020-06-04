@@ -10,6 +10,7 @@ from utils.log_hepler import logger
 from utils.path_helper import ROOT_DIR
 
 PAD_WORD = "<pad>"
+PAD_WORD_ID = 3000000
 WORD_EMBEDDING_SIZE = 300
 
 
@@ -45,6 +46,7 @@ def get_word_vec(path='data/GoogleNews-vectors-negative300.bin'):
     path = ROOT_DIR.joinpath(path)
     word_vec = KeyedVectors.load_word2vec_format(path, binary=True)
     word_vec.add([PAD_WORD], np.zeros([1, 300]))
+    logger.critical(f"PAD_WORD_ID is {word_vec.vocab[PAD_WORD].index}.")
     logger.info("word2vec model loaded.")
     return word_vec
 
