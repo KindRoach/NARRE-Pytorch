@@ -5,12 +5,12 @@ import torch
 
 @dataclass
 class BaseConfig(object):
-    num_epochs: int
-    batch_size: int
-    learning_rate: float
-    l2_regularization: float
-    learning_rate_decay: float
-    device: str
+    num_epochs: int = 100
+    batch_size: int = 128
+    learning_rate: float = 1e-3
+    l2_regularization: float = 1e-6
+    learning_rate_decay: float = 0.99
+    device: str = "cpu"
 
 
 class BaseModel(torch.nn.Module):

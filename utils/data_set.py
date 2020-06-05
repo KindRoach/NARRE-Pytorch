@@ -146,24 +146,7 @@ if __name__ == '__main__':
         review_count=20,
         pad_word_id=PAD_WORD_ID,
         pad_item_id=get_max_item_id() + 1,
-        pad_user_id=get_max_user_id() + 1,
-
-        # Useless fields
-        num_epochs=0,
-        batch_size=0,
-        learning_rate=0,
-        l2_regularization=0,
-        learning_rate_decay=0,
-        device="0",
-
-        # Useless fields
-        item_count=0,
-        user_count=0,
-        word_dim=0,
-        kernel_width=0,
-        kernel_deep=0,
-        latent_factors=0,
-        fm_k=0
+        pad_user_id=get_max_user_id() + 1
     )
 
     dataset = NarreDataset(train_data, review_by_user, review_by_item, config)
