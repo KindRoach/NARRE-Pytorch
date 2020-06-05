@@ -14,27 +14,27 @@ from utils.word2vec_helper import PAD_WORD_ID
 
 class NarreDataset(Dataset):
     def __init__(self, data: DataFrame,
-                 user_review: Dict[str, DataFrame],
-                 item_review: Dict[str, DataFrame],
+                 user_review_dict: Dict[str, DataFrame],
+                 item_review_dict: Dict[str, DataFrame],
                  config: NarreConfig):
         """
-        Init a NarreDateset.
+        Init a NarreDataset.
         :param data: original data. ["userID","itemID","review","rating"]
-        :param user_review: the review grouped by userID
-        :param item_review: the review grouped by itemID
+        :param user_review_dict: the review grouped by userID
+        :param item_review_dict: the review grouped by itemID
         :param config: the config of Narre model.
         """
 
         super().__init__()
         self.data = data
-        self.user_review = user_review
-        self.item_review = item_review
+        self.user_review_dict = user_review_dict
+        self.item_review_dict = item_review_dict
         self.config = config
 
         logger.info("Loading dataset...")
 
-        self.user_reviews, self.item_ids = self.load_user_review_data()
-        self.item_reviews, self.user_ids = self.load_item_review_data()
+        self.user_review, self.user_id, self.item_ids_per_review = self.load_user_review_data()
+        self.item_review, self.item_id, self.user_ids_per_review = self.load_item_review_data()
 
         ratings = self.data["rating"].to_list()
         self.ratings = torch.Tensor(ratings).view(-1, 1)
@@ -49,35 +49,47 @@ class NarreDataset(Dataset):
             torch.LongTensor,
             torch.LongTensor,
             torch.LongTensor,
+            torch.LongTensor,
+            torch.LongTensor,
             torch.Tensor):
 
-        return self.user_reviews[idx], \
-               self.item_ids[idx], \
-               self.item_reviews[idx], \
-               self.user_ids[idx], \
+        return self.user_review[idx], \
+               self.user_id[idx], \
+               self.item_ids_per_review[idx], \
+               self.item_review[idx], \
+               self.item_id[idx], \
+               self.user_ids_per_review[idx], \
                self.ratings[idx]
 
-    def load_user_review_data(self) -> (torch.LongTensor, torch.LongTensor):
+    def load_user_review_data(self) -> (torch.LongTensor, torch.LongTensor, torch.LongTensor):
         user_reviews = []
+        user_ids = []
         item_ids_per_review = []
 
         for user_id, item_id in zip(self.data["userID"], self.data["itemID"]):
-            u_review, i_id = self.load_reviews(self.user_review, user_id, item_id)
+            u_review, i_id = self.load_reviews(self.user_review_dict, user_id, item_id)
             user_reviews.append(u_review)
+            user_ids.append(user_id)
             item_ids_per_review.append(i_id)
 
-        return torch.LongTensor(user_reviews), torch.LongTensor(item_ids_per_review)
+        return torch.LongTensor(user_reviews), \
+               torch.LongTensor(user_ids).view(-1, 1), \
+               torch.LongTensor(item_ids_per_review)
 
-    def load_item_review_data(self) -> (torch.LongTensor, torch.LongTensor):
+    def load_item_review_data(self) -> (torch.LongTensor, torch.LongTensor, torch.LongTensor):
         item_reviews = []
+        item_ids = []
         user_ids_per_review = []
 
         for user_id, item_id in zip(self.data["userID"], self.data["itemID"]):
-            i_review, u_id = self.load_reviews(self.item_review, item_id, user_id)
+            i_review, u_id = self.load_reviews(self.item_review_dict, item_id, user_id)
             item_reviews.append(i_review)
+            item_ids.append(item_id)
             user_ids_per_review.append(u_id)
 
-        return torch.LongTensor(item_reviews), torch.LongTensor(user_ids_per_review)
+        return torch.LongTensor(item_reviews), \
+               torch.LongTensor(item_ids).view(-1, 1), \
+               torch.LongTensor(user_ids_per_review)
 
     def load_reviews(self, review: Dict[str, DataFrame], query_id: str, exclude_id: str) \
             -> (List[List[int]], List[int]):
@@ -154,10 +166,12 @@ if __name__ == '__main__':
 
     dataset = NarreDataset(train_data, review_by_user, review_by_item, config)
     loader = DataLoader(dataset, batch_size=128, shuffle=True)
-    for user_review, item_ids, item_review, user_ids, rating in loader:
+    for user_review, user_id, item_id_per_review, item_review, item_id, user_id_per_review, rating in loader:
         logger.info(
             f"{user_review.shape}, "
-            f"{item_ids.shape}, "
+            f"{user_id.shape}"
+            f"{item_id_per_review.shape}, "
             f"{item_review.shape}, "
-            f"{user_ids.shape}, "
+            f"{item_id.shape}"
+            f"{user_id_per_review.shape}, "
             f"{rating.shape}")

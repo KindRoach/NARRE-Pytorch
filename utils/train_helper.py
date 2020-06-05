@@ -39,13 +39,13 @@ def eval_model(model, data_iter, loss):
         predicts = []
         ratings = []
         for batch_id, iter_i in enumerate(data_iter):
-            user_review, item_id, item_review, user_id, rating = iter_i
+            user_review, user_id, item_id_per_review, item_review, item_id, user_id_per_review, rating = iter_i
             user_review = user_review.to(config.device)
             item_id = item_id.to(config.device)
             item_review = item_review.to(config.device)
             user_id = user_id.to(config.device)
             rating = rating.to(config.device)
-            predict = model(user_review, item_id, item_review, user_id)
+            predict = model(user_review, user_id, item_id_per_review, item_review, item_id, user_id_per_review)
             predicts.append(predict)
             ratings.append(rating)
 
@@ -84,7 +84,7 @@ def train_model(model: BaseModel, train_data: DataFrame, dev_data: DataFrame):
         model.train()
 
         for batch_id, iter_i in enumerate(train_data_iter):
-            user_review, item_id, item_review, user_id, rating = iter_i
+            user_review, user_id, item_id_per_review, item_review, item_id, user_id_per_review, rating = iter_i
             user_review = user_review.to(config.device)
             item_id = item_id.to(config.device)
             item_review = item_review.to(config.device)
@@ -92,7 +92,7 @@ def train_model(model: BaseModel, train_data: DataFrame, dev_data: DataFrame):
             rating = rating.to(config.device)
 
             opt.zero_grad()
-            predict = model(user_review, item_id, item_review, user_id)
+            predict = model(user_review, user_id, item_id_per_review, item_review, item_id, user_id_per_review)
             li = loss(predict, rating)
             li.backward()
             opt.step()

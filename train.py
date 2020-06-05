@@ -7,7 +7,6 @@ from utils.train_helper import train_model
 from utils.word2vec_helper import load_embedding_weights, PAD_WORD_ID, WORD_EMBEDDING_SIZE
 
 train_data, dev_data, test_data = get_train_dev_test_data()
-know_data = pandas.concat([train_data, dev_data])
 
 item_count = get_max_item_id() + 2
 user_count = get_max_user_id() + 1
@@ -32,5 +31,7 @@ config = NarreConfig(
     kernel_deep=100
 )
 
+# train_data = train_data.head(100)
+# dev_data = dev_data.head(100)
 model = NarreModel(config, load_embedding_weights())
 train_model(model, train_data, dev_data)
