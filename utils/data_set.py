@@ -5,16 +5,17 @@ import torch
 from pandas import DataFrame
 from torch.utils.data import Dataset, DataLoader
 
+from model.narre import NarreConfig
 from utils.data_reader import get_review_dict, get_train_dev_test_data
 from utils.log_hepler import logger
-from utils.word2vec_hepler import PAD_WORD_ID
+from utils.word2vec_helper import PAD_WORD_ID
 
 
-class NarreDateset(Dataset):
+class NarreDataset(Dataset):
     def __init__(self, data: DataFrame,
                  user_review: Dict[str, DataFrame],
                  item_review: Dict[str, DataFrame],
-                 review_count: int, review_length: int):
+                 config: NarreConfig):
         """
         Init a NarreDateset.
         :param data: original data. ["userID","itemID","review","rating"]
@@ -28,8 +29,7 @@ class NarreDateset(Dataset):
         self.data = data
         self.user_review = user_review
         self.item_review = item_review
-        self.review_count = review_count
-        self.review_length = review_length
+        self.config = config
 
         logger.info("Loading dataset...")
 
@@ -85,19 +85,19 @@ class NarreDateset(Dataset):
         reviews = review[query_id]
         key = "userID" if "userID" in reviews.columns else "itemID"
         reviews = reviews["review"][reviews[key] != exclude_id].to_list()
-        reviews = [r[:self.review_length] for r in reviews]
+        reviews = [r[:self.config.review_length] for r in reviews]
 
-        if len(reviews) >= self.review_count:
-            reviews = reviews[:self.review_count]
+        if len(reviews) >= self.config.review_count:
+            reviews = reviews[:self.config.review_count]
         else:
-            reviews += [[PAD_WORD_ID] * self.review_length] * (self.review_count - len(reviews))
+            reviews += [[PAD_WORD_ID] * self.config.review_length] * (self.config.review_count - len(reviews))
         return reviews
 
 
 if __name__ == '__main__':
     train_data, _, _ = get_train_dev_test_data()
-    review_by_user, review_by_item = get_review_dict()
-    dataset = NarreDateset(train_data, review_by_user, review_by_item, 20, 200)
+    review_by_user, review_by_item = get_review_dict("train")
+    dataset = NarreDataset(train_data, review_by_user, review_by_item, 20, 200)
     loader = DataLoader(dataset, batch_size=128, shuffle=True)
     for user_review, item_review, rating in loader:
         print(user_review.shape, item_review.shape, rating.shape)

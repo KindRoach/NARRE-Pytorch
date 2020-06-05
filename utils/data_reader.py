@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 
 from utils.log_hepler import logger
 from utils.path_helper import ROOT_DIR
-from utils.word2vec_hepler import review2wid, get_word_vec, save_embedding_weights
+from utils.word2vec_helper import review2wid, get_word_vec, save_embedding_weights
 
 
 def get_all_data(path="data/reviews.json") -> DataFrame:
@@ -70,7 +70,9 @@ def process_raw_data(in_path="data/Digital_Music_5.json", out_path="data/reviews
     logger.info("reading raw data...")
     df = pandas.read_json(ROOT_DIR.joinpath(in_path), lines=True)
     df = df[["reviewerID", "asin", "reviewText", "overall"]]
-    df.columns = ["userID", "itemID", "review", "rating"]
+    df.columns = ["raw_userID", "raw_itemID", "review", "rating"]
+    df["userID"] = df.groupby(df["raw_userID"]).ngroup()
+    df["itemID"] = df.groupby(df["raw_itemID"]).ngroup()
     stop_words = get_stop_words()
     punctuations = get_punctuations()
     lemmatizer = nltk.WordNetLemmatizer()
@@ -105,9 +107,15 @@ def get_reviews_in_idx(data: DataFrame, word_vec, max_length: int) -> (Dict[str,
     return review_by_user, review_by_item
 
 
-def get_review_dict():
-    user_review = pickle.load(open(ROOT_DIR.joinpath("data/user_review_word_idx.p"), "rb"))
-    item_review = pickle.load(open(ROOT_DIR.joinpath("data/item_review_word_idx.p"), "rb"))
+def save_review_dict(data: DataFrame, word_vec, max_length: int, data_type: str):
+    user_review, item_review = get_reviews_in_idx(data, word_vec, max_length)
+    pickle.dump(user_review, open(ROOT_DIR.joinpath(f"data/user_review_word_idx_{data_type}.p"), "wb"))
+    pickle.dump(item_review, open(ROOT_DIR.joinpath(f"data/item_review_word_idx_{data_type}.p"), "wb"))
+
+
+def get_review_dict(data_type: str):
+    user_review = pickle.load(open(ROOT_DIR.joinpath(f"data/user_review_word_idx_{data_type}.p"), "rb"))
+    item_review = pickle.load(open(ROOT_DIR.joinpath(f"data/item_review_word_idx_{data_type}.p"), "rb"))
     return user_review, item_review
 
 
@@ -116,11 +124,11 @@ if __name__ == "__main__":
 
     train_data, dev_data, test_data = get_train_dev_test_data()
     known_data = pandas.concat([train_data, dev_data])
-    max_length = get_max_review_length(known_data)
+    all_data = pandas.concat([train_data, dev_data, test_data])
+    max_length = get_max_review_length(all_data)
 
     word_vec = get_word_vec()
     save_embedding_weights(word_vec)
 
-    user_review, item_review = get_reviews_in_idx(known_data, word_vec, max_length)
-    pickle.dump(user_review, open(ROOT_DIR.joinpath("data/user_review_word_idx.p"), "wb"))
-    pickle.dump(item_review, open(ROOT_DIR.joinpath("data/item_review_word_idx.p"), "wb"))
+    save_review_dict(known_data, word_vec, max_length, "train")
+    save_review_dict(all_data, word_vec, max_length, "test")
