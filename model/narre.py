@@ -80,6 +80,7 @@ class ReviewEncoder(torch.nn.Module):
 class NarreModel(BaseModel):
     def __init__(self, config: NarreConfig, word_embedding_weight):
         super(NarreModel, self).__init__(config)
+        self.config = config
 
         self.word_embedding = torch.nn.Embedding.from_pretrained(word_embedding_weight)
         self.word_embedding.weight.requires_grad = False
@@ -89,7 +90,7 @@ class NarreModel(BaseModel):
 
         self.predict_linear = torch.nn.Linear(config.id_dim * 2, 1)
 
-    def forward(self, user_review, item_ids, item_review, user_ids):
+    def forward(self, user_review, item_id, item_review, user_id):
         """
         Input Size:
             (Batch Size, Review Count, Review Length, Word Dim)
@@ -102,10 +103,10 @@ class NarreModel(BaseModel):
         """
 
         user_review = self.word_embedding(user_review)
-        user_review = self.user_review_layer(user_review)
+        user_review = self.user_review_layer(user_review, item_id)
 
         item_review = self.word_embedding(item_review)
-        item_review = self.user_review_layer(item_review)
+        item_review = self.user_review_layer(item_review, user_id)
 
         predict = self.predict_linear(user_review * item_review)
         return predict
