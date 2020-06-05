@@ -106,22 +106,22 @@ def process_raw_data(in_path="data/Digital_Music_5.json", out_path="data/reviews
     logger.info("Processed data saved.")
 
 
-def get_reviews_in_idx(data: DataFrame, word_vec, max_length: int) -> (Dict[str, DataFrame], Dict[str, DataFrame]):
+def get_reviews_in_idx(data: DataFrame, word_vec) -> (Dict[str, DataFrame], Dict[str, DataFrame]):
     """
     1. Group review by user and item.
     2. Convert word into word idx.
     :return The dictionary from userID/itemID to review text in word idx with itemID/userID.
     """
 
-    data["review"] = data["review"].apply(review2wid, args=[word_vec, max_length])
+    data["review"] = data["review"].apply(review2wid, args=[word_vec])
     review_by_user = dict(list(data[["itemID", "review"]].groupby(data["userID"])))
     review_by_item = dict(list(data[["userID", "review"]].groupby(data["itemID"])))
 
     return review_by_user, review_by_item
 
 
-def save_review_dict(data: DataFrame, word_vec, max_length: int, data_type: str):
-    user_review, item_review = get_reviews_in_idx(data, word_vec, max_length)
+def save_review_dict(data: DataFrame, word_vec, data_type: str):
+    user_review, item_review = get_reviews_in_idx(data, word_vec)
     pickle.dump(user_review, open(ROOT_DIR.joinpath(f"data/user_review_word_idx_{data_type}.p"), "wb"))
     pickle.dump(item_review, open(ROOT_DIR.joinpath(f"data/item_review_word_idx_{data_type}.p"), "wb"))
 
@@ -140,10 +140,12 @@ if __name__ == "__main__":
     train_data, dev_data, test_data = get_train_dev_test_data()
     known_data = pandas.concat([train_data, dev_data])
     all_data = pandas.concat([train_data, dev_data, test_data])
-    max_length = get_max_review_length(all_data)
+
+    logger.info(f"Max review length = {get_max_review_length(all_data)}")
+    logger.info(f"Max review count = {get_max_review_count(all_data)}")
 
     word_vec = get_word_vec()
     save_embedding_weights(word_vec)
 
-    save_review_dict(known_data, word_vec, max_length, "train")
-    save_review_dict(all_data, word_vec, max_length, "test")
+    save_review_dict(known_data, word_vec, "train")
+    save_review_dict(all_data, word_vec, "test")

@@ -111,28 +111,31 @@ class NarreDataset(Dataset):
 
         """
 
+        config = self.config
         reviews = review[query_id]
-
         if "userID" in reviews.columns:
             id_name = "userID"
-            pad_id = self.config.pad_user_id
+            pad_id = config.pad_user_id
         else:
             id_name = "itemID"
-            pad_id = self.config.pad_item_id
-
-        pad_review = [self.config.pad_word_id] * self.config.review_length
+            pad_id = config.pad_item_id
 
         ids = reviews[id_name][reviews[id_name] != exclude_id].to_list()
         reviews = reviews["review"][reviews[id_name] != exclude_id].to_list()
-        reviews = [r[:self.config.review_length] for r in reviews]
 
-        if len(reviews) >= self.config.review_count:
-            reviews = reviews[:self.config.review_count]
-            ids = ids[:self.config.review_count]
-        else:
-            pad_length = self.config.review_count - len(reviews)
-            reviews += [pad_review] * pad_length
-            ids += [pad_id] * pad_length
+        # shorten review length
+        reviews = [r[:config.review_length] for r in reviews]
+        # pad review length
+        reviews = [r + [config.pad_word_id] * (config.review_length - len(r)) for r in reviews]
+
+        # shorten review count
+        reviews = reviews[:config.review_count]
+        ids = ids[:config.review_count]
+        # pad review count
+        pad_length = config.review_count - len(reviews)
+        pad_review = [config.pad_word_id] * config.review_length
+        reviews += [pad_review] * pad_length
+        ids += [pad_id] * pad_length
 
         return reviews, ids
 

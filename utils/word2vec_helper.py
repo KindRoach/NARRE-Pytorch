@@ -16,7 +16,7 @@ PAD_WORD_ID = 3000000
 WORD_EMBEDDING_SIZE = 300
 
 
-def review2wid(review: str, word_vec: Word2VecKeyedVectors, max_length: int) -> List[int]:
+def review2wid(review: str, word_vec: Word2VecKeyedVectors) -> List[int]:
     """
     1. Convert words in review to word idx, which is from pre-trained word embedding model.
     2. Pad or shorten review to max length.
@@ -32,11 +32,6 @@ def review2wid(review: str, word_vec: Word2VecKeyedVectors, max_length: int) -> 
             wid = pad_index
         wids.append(wid)
 
-    # Pad list to max length.
-    if len(wids) < max_length:
-        wids += [pad_index] * (max_length - len(wids))
-    else:
-        wids = wids[:max_length]
     return wids
 
 
