@@ -61,6 +61,16 @@ def get_max_review_count(data: DataFrame, percentile: float = 0.85):
     return max_count
 
 
+def get_max_user_id() -> int:
+    data = get_all_data()
+    return max(data["userID"])
+
+
+def get_max_item_id() -> int:
+    data = get_all_data()
+    return max(data["itemID"])
+
+
 def process_raw_data(in_path="data/Digital_Music_5.json", out_path="data/reviews.json"):
     """
     Read raw data and remove useless columns and clear review text.
@@ -71,8 +81,11 @@ def process_raw_data(in_path="data/Digital_Music_5.json", out_path="data/reviews
     df = pandas.read_json(ROOT_DIR.joinpath(in_path), lines=True)
     df = df[["reviewerID", "asin", "reviewText", "overall"]]
     df.columns = ["raw_userID", "raw_itemID", "review", "rating"]
+
+    # assign new numeric id to user and item.
     df["userID"] = df.groupby(df["raw_userID"]).ngroup()
     df["itemID"] = df.groupby(df["raw_itemID"]).ngroup()
+
     stop_words = get_stop_words()
     punctuations = get_punctuations()
     lemmatizer = nltk.WordNetLemmatizer()
@@ -121,6 +134,8 @@ def get_review_dict(data_type: str):
 
 if __name__ == "__main__":
     process_raw_data()
+    logger.info(f"Max user id = {get_max_user_id()}")
+    logger.info(f"Max item id = {get_max_item_id()}")
 
     train_data, dev_data, test_data = get_train_dev_test_data()
     known_data = pandas.concat([train_data, dev_data])
