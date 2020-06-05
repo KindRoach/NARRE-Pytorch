@@ -10,6 +10,8 @@ from utils.log_hepler import logger
 from utils.path_helper import ROOT_DIR
 
 PAD_WORD = "<pad>"
+# Change this value according to the word embedding you use.
+# Check code in get_word_vec()
 PAD_WORD_ID = 3000000
 WORD_EMBEDDING_SIZE = 300
 
@@ -26,6 +28,7 @@ def review2wid(review: str, word_vec: Word2VecKeyedVectors, max_length: int) -> 
         if word in word_vec:
             wid = word_vec.vocab[word].index
         else:
+            # PAD_WORD also used as UNK_WORD
             wid = pad_index
         wids.append(wid)
 
@@ -45,8 +48,14 @@ def get_word_vec(path='data/GoogleNews-vectors-negative300.bin'):
     logger.info("loading word2vec model...")
     path = ROOT_DIR.joinpath(path)
     word_vec = KeyedVectors.load_word2vec_format(path, binary=True)
-    word_vec.add([PAD_WORD], np.zeros([1, 300]))
-    logger.critical(f"PAD_WORD_ID is {word_vec.vocab[PAD_WORD].index}.")
+
+    if PAD_WORD not in word_vec:
+        word_vec.add([PAD_WORD], np.zeros([1, 300]))
+        logger.info(f"Add PAD_WORD to word embedding.")
+
+    assert PAD_WORD_ID == word_vec.vocab[PAD_WORD].index, \
+        f"PAD_WORD_ID should be {word_vec.vocab[PAD_WORD].index} but not {PAD_WORD_ID}."
+
     logger.info("word2vec model loaded.")
     return word_vec
 
