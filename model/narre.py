@@ -24,6 +24,8 @@ class NarreConfig(BaseConfig):
     kernel_width: int = 5
     kernel_deep: int = 100
 
+    dropout: float = 0.5
+
 
 class ReviewEncoder(torch.nn.Module):
     def __init__(self, config: NarreConfig):
@@ -44,6 +46,7 @@ class ReviewEncoder(torch.nn.Module):
         self.att_layer = torch.nn.Linear(config.id_dim, 1)
 
         self.top_linear = torch.nn.Linear(config.kernel_deep, config.id_dim)
+        self.dropout = torch.nn.Dropout(self.config.dropout)
 
     def forward(self, review, id_emb):
         """
@@ -66,15 +69,39 @@ class ReviewEncoder(torch.nn.Module):
         id_att = self.att_id(id_emb)
         att_weight = self.att_layer(F.relu(review_att + id_att))
         att_weight = F.softmax(att_weight, dim=1)
-
         att_out = (att_weight * review_in_many).sum(1)
-        att_out = self.top_linear(att_out)
-        return att_out
+
+        feature = self.dropout(att_out)
+        feature = self.top_linear(feature)
+        return feature
+
+
+class LatentFactor(torch.nn.Module):
+    def __init__(self, config: NarreConfig):
+        super().__init__()
+        self.linear = torch.nn.Linear(config.id_dim * 2, 1)
+        self.b_user = torch.nn.Parameter(torch.randn([config.user_count]), requires_grad=True)
+        self.b_item = torch.nn.Parameter(torch.randn([config.item_count]), requires_grad=True)
+
+    def forward(self, user_feature, user_id, item_feature, item_id):
+        """
+        Input Size:
+            (Batch Size, Id Dim * 2)
+            (Batch Size, 1)
+            (Batch Size, Id Dim * 2)
+            (Batch Size, 1)
+
+        Output Size:
+            (Batch Size, 1)
+        """
+        dot = user_feature * item_feature
+        predict = self.linear(dot) + self.b_user[user_id] + self.b_item[item_id]
+        return predict
 
 
 class NarreModel(BaseModel):
     def __init__(self, config: NarreConfig, word_embedding_weight):
-        super(NarreModel, self).__init__(config)
+        super().__init__(config)
         self.config = config
 
         self.word_embedding = torch.nn.Embedding.from_pretrained(word_embedding_weight)
@@ -86,7 +113,7 @@ class NarreModel(BaseModel):
         self.user_review_layer = ReviewEncoder(config)
         self.item_review_layer = ReviewEncoder(config)
 
-        self.predict_linear = torch.nn.Linear(config.id_dim * 2, 1)
+        self.predict_linear = LatentFactor(config)
 
     def forward(self, user_review, user_id, item_id_per_review, item_review, item_id, user_id_per_review):
         """
@@ -103,16 +130,16 @@ class NarreModel(BaseModel):
         """
 
         user_review = self.word_embedding(user_review)
-        item_id_per_review = self.item_embedding(item_id_per_review)
-        user_review = self.user_review_layer(user_review, item_id_per_review)
-        user_id = self.user_embedding(user_id).view(-1, self.config.id_dim)
-        user_review = torch.cat([user_id, user_review], dim=1)
+        item_id_per_review_emb = self.item_embedding(item_id_per_review)
+        user_review = self.user_review_layer(user_review, item_id_per_review_emb)
+        user_id_emb = self.user_embedding(user_id).view(-1, self.config.id_dim)
+        user_feature = torch.cat([user_id_emb, user_review], dim=1)
 
         item_review = self.word_embedding(item_review)
-        user_id_per_review = self.user_embedding(user_id_per_review)
-        item_review = self.item_review_layer(item_review, user_id_per_review)
-        item_id = self.item_embedding(item_id).view(-1, self.config.id_dim)
-        item_review = torch.cat([item_id, item_review], dim=1)
+        user_id_per_review_emb = self.user_embedding(user_id_per_review)
+        item_review = self.item_review_layer(item_review, user_id_per_review_emb)
+        item_id_emb = self.item_embedding(item_id).view(-1, self.config.id_dim)
+        item_feature = torch.cat([item_id_emb, item_review], dim=1)
 
-        predict = self.predict_linear(user_review * item_review)
+        predict = self.predict_linear(user_feature, user_id, item_feature, item_id)
         return predict
