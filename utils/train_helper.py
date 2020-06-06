@@ -60,7 +60,7 @@ def eval_model(model, data_iter, loss):
         return loss(predicts, ratings).item()
 
 
-def train_model(model: BaseModel, train_data: DataFrame, dev_data: DataFrame):
+def train_model(model: BaseModel, train_data: DataFrame, dev_data: DataFrame, is_save_model: bool = True):
     model_name = model.__class__.__name__
     train_time = time.localtime()
     add_log_file(logger, "log/%s_%s.log" % (model_name, time.strftime("%Y%m%d%H%M%S", train_time)))
@@ -75,7 +75,7 @@ def train_model(model: BaseModel, train_data: DataFrame, dev_data: DataFrame):
     loss = torch.nn.MSELoss()
 
     last_progress = 0.
-    last_loss = float("inf")
+    min_loss = float("inf")
 
     pin_memory = config.device not in ["cpu", "CPU"]
     review_by_user, review_by_item = get_review_dict("train")
@@ -102,7 +102,6 @@ def train_model(model: BaseModel, train_data: DataFrame, dev_data: DataFrame):
 
             rating = rating.to(config.device)
 
-
             opt.zero_grad()
             predict = model(user_review, user_id, item_id_per_review, item_review, item_id, user_id_per_review)
             li = loss(predict, rating)
@@ -125,9 +124,11 @@ def train_model(model: BaseModel, train_data: DataFrame, dev_data: DataFrame):
                     % (model.current_epoch, train_loss, dev_loss))
 
         # save best model
-        if train_loss < last_loss:
-            last_loss = train_loss
-            save_model(model, train_time)
+        if train_loss < min_loss:
+            min_loss = train_loss
+            logger.info(f"Get min loss: {train_loss}")
+            if is_save_model:
+                save_model(model, train_time)
 
         lr_s.step(model.current_epoch)
         model.current_epoch += 1
