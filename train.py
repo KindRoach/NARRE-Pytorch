@@ -9,12 +9,12 @@ from utils.word2vec_helper import load_embedding_weights, PAD_WORD_ID, WORD_EMBE
 train_data, dev_data, test_data = get_train_dev_test_data()
 
 item_count = get_max_item_id() + 2
-user_count = get_max_user_id() + 1
+user_count = get_max_user_id() + 2
 config = NarreConfig(
     num_epochs=100,
     batch_size=16,
     learning_rate=1e-3,
-    l2_regularization=1e-3,
+    l2_regularization=2e-3,
     learning_rate_decay=0.99,
     device="cuda:0" if torch.cuda.is_available() else "cpu",
 
@@ -27,8 +27,9 @@ config = NarreConfig(
     review_count=25,
     word_dim=WORD_EMBEDDING_SIZE,
     id_dim=32,
-    kernel_width=5,
-    kernel_deep=100
+    kernel_width=3,
+    kernel_deep=100,
+    dropout=0.5
 )
 
 # train_data = train_data.head(100)
