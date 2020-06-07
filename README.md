@@ -1,5 +1,5 @@
 # Narre
-This is a PyTorch implementation of Narre from the paper:  
+This is a PyTorch implementation of NARRE from the paper:  
   
 _Chen, Chong, et al. "Neural attentional rating regression with review-level explanations." Proceedings of the 2018 World Wide Web Conference. 2018._
 
