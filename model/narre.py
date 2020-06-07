@@ -59,7 +59,7 @@ class ReviewEncoder(torch.nn.Module):
             (Batch Size, Review Count)
 
         Output Size:
-            (Batch Size, Id Dim * 2)
+            (Batch Size, Id Dim)
         """
 
         preference_id_emb = self.preference_id_embedding(preference_id).view(-1, self.config.id_dim)
@@ -80,23 +80,23 @@ class ReviewEncoder(torch.nn.Module):
 
         feature = self.dropout(att_out)
         feature = self.top_linear(feature)
-        feature = torch.cat([preference_id_emb, feature], dim=1)
+        feature = preference_id_emb + feature
         return feature
 
 
 class LatentFactor(torch.nn.Module):
     def __init__(self, config: NarreConfig):
         super().__init__()
-        self.linear = torch.nn.Linear(config.id_dim * 2, 1)
+        self.linear = torch.nn.Linear(config.id_dim, 1)
         self.b_user = torch.nn.Parameter(torch.randn([config.user_count]), requires_grad=True)
         self.b_item = torch.nn.Parameter(torch.randn([config.item_count]), requires_grad=True)
 
     def forward(self, user_feature, user_id, item_feature, item_id):
         """
         Input Size:
-            (Batch Size, Id Dim * 2)
+            (Batch Size, Id Dim)
             (Batch Size, 1)
-            (Batch Size, Id Dim * 2)
+            (Batch Size, Id Dim)
             (Batch Size, 1)
 
         Output Size:

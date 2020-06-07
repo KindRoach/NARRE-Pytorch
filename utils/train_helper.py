@@ -135,3 +135,4 @@ def train_model(model: BaseModel, train_data: DataFrame, dev_data: DataFrame, is
 
     logger.info("%s trained!" % model_name)
     remove_log_file(logger)
+    return min_loss
